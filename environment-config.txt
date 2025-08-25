@@ -1,0 +1,8 @@
+# Spotify API Credentials
+SPOTIFY_CLIENT_ID=fb3042353ded45c2859814d266233fa7
+SPOTIFY_CLIENT_SECRET=a1b75d26d5134d4c831d4a3cac981ebe
+SPOTIFY_REDIRECT_URI=http://localhost:3000/callback
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
