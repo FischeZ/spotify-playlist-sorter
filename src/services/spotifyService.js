@@ -16,6 +16,13 @@ class SpotifyService {
             'playlist-modify-private',
             'playlist-modify-public'
         ];
+
+        // Simple in-memory token storage (in production, use Redis or database)
+        this.tokenStorage = {
+            accessToken: null,
+            refreshToken: null,
+            expiresAt: null
+        };
     }
 
     /**
@@ -32,7 +39,12 @@ class SpotifyService {
         try {
             const data = await this.spotifyApi.authorizationCodeGrant(code);
             
-            // Set the access token and refresh token
+            // Store tokens persistently
+            this.tokenStorage.accessToken = data.body.access_token;
+            this.tokenStorage.refreshToken = data.body.refresh_token;
+            this.tokenStorage.expiresAt = Date.now() + (data.body.expires_in * 1000);
+            
+            // Set the access token and refresh token on the API instance
             this.spotifyApi.setAccessToken(data.body.access_token);
             this.spotifyApi.setRefreshToken(data.body.refresh_token);
             
@@ -41,7 +53,7 @@ class SpotifyService {
             
             return data.body;
         } catch (error) {
-            console.error('Error during authentication:', error);
+            console.error('Error during authentication:', error.response?.body || error.message);
             throw new Error('Failed to authenticate with Spotify');
         }
     }
@@ -50,7 +62,30 @@ class SpotifyService {
      * Check if user is authenticated
      */
     isAuthenticated() {
-        return !!this.spotifyApi.getAccessToken();
+        // Check if we have tokens and they're not expired
+        const hasTokens = this.tokenStorage.accessToken && this.tokenStorage.refreshToken;
+        const notExpired = this.tokenStorage.expiresAt && Date.now() < this.tokenStorage.expiresAt;
+        
+        if (hasTokens && notExpired) {
+            // Ensure the API instance has the tokens set
+            this.spotifyApi.setAccessToken(this.tokenStorage.accessToken);
+            this.spotifyApi.setRefreshToken(this.tokenStorage.refreshToken);
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Ensure tokens are set on the API instance
+     */
+    ensureTokensSet() {
+        if (this.tokenStorage.accessToken) {
+            this.spotifyApi.setAccessToken(this.tokenStorage.accessToken);
+        }
+        if (this.tokenStorage.refreshToken) {
+            this.spotifyApi.setRefreshToken(this.tokenStorage.refreshToken);
+        }
     }
 
     /**
@@ -58,12 +93,24 @@ class SpotifyService {
      */
     async refreshAccessToken() {
         try {
+            // Make sure we have the refresh token set
+            if (this.tokenStorage.refreshToken) {
+                this.spotifyApi.setRefreshToken(this.tokenStorage.refreshToken);
+            }
+            
             const data = await this.spotifyApi.refreshAccessToken();
+            
+            // Update stored tokens
+            this.tokenStorage.accessToken = data.body.access_token;
+            this.tokenStorage.expiresAt = Date.now() + (data.body.expires_in * 1000);
+            
             this.spotifyApi.setAccessToken(data.body.access_token);
             console.log('Access token refreshed successfully');
             return data.body.access_token;
         } catch (error) {
             console.error('Error refreshing access token:', error);
+            // Clear tokens on refresh failure
+            this.tokenStorage = { accessToken: null, refreshToken: null, expiresAt: null };
             throw new Error('Failed to refresh access token');
         }
     }
@@ -73,6 +120,7 @@ class SpotifyService {
      */
     async getUserProfile() {
         try {
+            this.ensureTokensSet();
             const data = await this.spotifyApi.getMe();
             return data.body;
         } catch (error) {
@@ -90,6 +138,7 @@ class SpotifyService {
      */
     async getUserPlaylists(limit = 50) {
         try {
+            this.ensureTokensSet();
             const data = await this.spotifyApi.getUserPlaylists({ limit });
             return data.body.items;
         } catch (error) {
@@ -107,6 +156,7 @@ class SpotifyService {
      */
     async getPlaylist(playlistId) {
         try {
+            this.ensureTokensSet();
             const data = await this.spotifyApi.getPlaylist(playlistId);
             return data.body;
         } catch (error) {
@@ -124,6 +174,7 @@ class SpotifyService {
      */
     async getPlaylistTracks(playlistId) {
         try {
+            this.ensureTokensSet();
             let allTracks = [];
             let offset = 0;
             const limit = 100;
@@ -171,6 +222,7 @@ class SpotifyService {
      */
     async reorderPlaylistTracks(playlistId, trackUris) {
         try {
+            this.ensureTokensSet();
             // Clear the playlist first
             await this.spotifyApi.replaceTracksInPlaylist(playlistId, []);
             

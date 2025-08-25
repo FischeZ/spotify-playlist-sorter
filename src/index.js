@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const SpotifyService = require('./services/spotifyService');
 const PlaylistSorter = require('./services/playlistSorter');
 
@@ -7,169 +8,115 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // Parse form data
-app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true }));
 
 // Initialize services
 const spotifyService = new SpotifyService();
 const playlistSorter = new PlaylistSorter(spotifyService);
 
-// Routes
-app.get('/', (req, res) => {
-    res.send(`
-        <html>
-            <head>
-                <title>Spotify Playlist Sorter</title>
-                <style>
-                    body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-                    .container { text-align: center; }
-                    .btn { background: #1db954; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-size: 16px; }
-                    .btn:hover { background: #1ed760; }
-                    .info { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>🎵 Spotify Playlist Sorter</h1>
-                    <div class="info">
-                        <p>This application will help you sort your Spotify playlists by release date.</p>
-                        <p>Click the button below to authenticate with Spotify and get started!</p>
-                    </div>
-                    <a href="/auth" class="btn">Connect to Spotify</a>
-                </div>
-            </body>
-        </html>
-    `);
-});
-
-// Authentication routes
-app.get('/auth', (req, res) => {
-    const authURL = spotifyService.getAuthURL();
-    res.redirect(authURL);
-});
-
-app.get('/callback', async (req, res) => {
+// API Routes
+app.get('/api/auth-url', (req, res) => {
     try {
-        const { code } = req.query;
-        await spotifyService.handleCallback(code);
-        res.redirect('/dashboard');
+        const authURL = spotifyService.getAuthURL();
+        res.json({ authUrl: authURL });
     } catch (error) {
-        console.error('Authentication error:', error);
-        res.status(500).send('Authentication failed. Please try again.');
+        console.error('Error generating auth URL:', error);
+        res.status(500).json({ error: 'Failed to generate auth URL' });
     }
 });
 
-// Dashboard route
-app.get('/dashboard', async (req, res) => {
+// Note: OAuth callback is now handled directly in GET /callback route above
+
+app.get('/api/auth-status', (req, res) => {
+    try {
+        const authenticated = spotifyService.isAuthenticated();
+        res.json({ authenticated });
+    } catch (error) {
+        console.error('Error checking auth status:', error);
+        res.json({ authenticated: false });
+    }
+});
+
+// Spotify OAuth callback route - handle authentication directly
+app.get('/callback', async (req, res) => {
+    const { code, error } = req.query;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    
+    if (error) {
+        console.error('Spotify OAuth error:', error);
+        res.redirect(`${frontendUrl}/callback?error=${encodeURIComponent(error)}`);
+        return;
+    }
+    
+    if (!code) {
+        console.error('No authorization code received');
+        res.redirect(`${frontendUrl}/callback?error=no_code_received`);
+        return;
+    }
+
+    try {
+        // Handle authentication directly here
+        await spotifyService.handleCallback(code);
+        console.log('Authentication successful, redirecting to dashboard');
+        res.redirect(`${frontendUrl}/dashboard`);
+    } catch (authError) {
+        console.error('Authentication failed:', authError.message);
+        res.redirect(`${frontendUrl}/callback?error=${encodeURIComponent('authentication_failed')}`);
+    }
+});
+
+app.get('/api/playlists', async (req, res) => {
     try {
         if (!spotifyService.isAuthenticated()) {
-            return res.redirect('/auth');
+            return res.status(401).json({ error: 'Not authenticated' });
         }
 
         const playlists = await spotifyService.getUserPlaylists();
-        
-        let playlistOptions = playlists.map(playlist => 
-            `<option value="${playlist.id}">${playlist.name} (${playlist.tracks.total} tracks)</option>`
-        ).join('');
-
-        res.send(`
-            <html>
-                <head>
-                    <title>Spotify Playlist Sorter - Dashboard</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-                        .container { text-align: center; }
-                        .form-group { margin: 20px 0; }
-                        select, button { padding: 10px; font-size: 16px; }
-                        select { width: 300px; }
-                        .btn { background: #1db954; color: white; padding: 15px 30px; border: none; border-radius: 25px; cursor: pointer; }
-                        .btn:hover { background: #1ed760; }
-                        .result { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <h1>🎵 Select a Playlist to Sort</h1>
-                        <form action="/sort" method="post">
-                            <div class="form-group">
-                                <label for="playlist">Choose a playlist:</label><br><br>
-                                <select name="playlistId" id="playlist" required>
-                                    <option value="">Select a playlist...</option>
-                                    ${playlistOptions}
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <button type="submit" class="btn">Sort by Release Date</button>
-                            </div>
-                        </form>
-                        <p><a href="/auth">Re-authenticate</a> | <a href="/">Home</a></p>
-                    </div>
-                </body>
-            </html>
-        `);
+        res.json(playlists);
     } catch (error) {
-        console.error('Dashboard error:', error);
-        res.status(500).send('Error loading dashboard. Please try again.');
+        console.error('Error fetching playlists:', error);
+        res.status(500).json({ error: 'Failed to fetch playlists' });
     }
 });
 
-// Sort playlist route
-app.post('/sort', async (req, res) => {
+app.post('/api/sort', async (req, res) => {
     try {
         const { playlistId } = req.body;
         
         if (!playlistId) {
-            return res.status(400).send('Please select a playlist.');
+            return res.status(400).json({ error: 'Please select a playlist.' });
+        }
+
+        if (!spotifyService.isAuthenticated()) {
+            return res.status(401).json({ error: 'Not authenticated' });
         }
 
         const result = await playlistSorter.sortPlaylistByReleaseDate(playlistId);
-        
-        res.send(`
-            <html>
-                <head>
-                    <title>Sorting Complete</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
-                        .container { text-align: center; }
-                        .result { background: #d4edda; padding: 20px; border-radius: 10px; margin: 20px 0; }
-                        .track-list { text-align: left; max-height: 400px; overflow-y: auto; background: white; padding: 15px; border-radius: 5px; }
-                        .track { margin: 10px 0; padding: 10px; border-bottom: 1px solid #eee; }
-                        .btn { background: #1db954; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <h1>✅ Playlist Sorted Successfully!</h1>
-                        <div class="result">
-                            <h3>${result.playlistName}</h3>
-                            <p>Sorted ${result.tracksProcessed} tracks by release date</p>
-                            <p>Oldest: ${result.oldestTrack?.name} (${result.oldestTrack?.releaseDate})</p>
-                            <p>Newest: ${result.newestTrack?.name} (${result.newestTrack?.releaseDate})</p>
-                        </div>
-                        <div class="track-list">
-                            <h4>Track Order (Oldest to Newest):</h4>
-                            ${result.sortedTracks.map((track, index) => `
-                                <div class="track">
-                                    <strong>${index + 1}.</strong> ${track.name} by ${track.artists.join(', ')} 
-                                    <span style="color: #666;">(${track.releaseDate})</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <p><a href="/dashboard" class="btn">Sort Another Playlist</a></p>
-                    </div>
-                </body>
-            </html>
-        `);
+        res.json(result);
     } catch (error) {
         console.error('Sort error:', error);
-        res.status(500).send(`
-            <div style="text-align: center; padding: 50px;">
-                <h2>Error Sorting Playlist</h2>
-                <p>${error.message}</p>
-                <a href="/dashboard">Try Again</a>
-            </div>
-        `);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/playlist/:playlistId/stats', async (req, res) => {
+    try {
+        const { playlistId } = req.params;
+        
+        if (!spotifyService.isAuthenticated()) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+
+        const stats = await playlistSorter.getPlaylistStatistics(playlistId);
+        res.json(stats);
+    } catch (error) {
+        console.error('Stats error:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

@@ -1,22 +1,25 @@
 # 🎵 Spotify Playlist Sorter
 
-A Node.js web application that sorts your Spotify playlists by release date using the Spotify Web API. Organize your music chronologically with just a few clicks!
+A modern full-stack web application built with React (Vite) and Node.js that sorts your Spotify playlists by release date using the Spotify Web API. Organize your music chronologically with a beautiful, responsive interface!
 
 ## ✨ Features
 
+- **Modern React Frontend**: Built with React 18 and Vite for lightning-fast development and performance
 - **OAuth Authentication**: Secure login with your Spotify account
 - **Playlist Selection**: Choose from all your playlists (both public and private)
 - **Release Date Sorting**: Automatically sort tracks from oldest to newest release date
 - **Smart Date Handling**: Handles different date precisions (year, month, day)
-- **Beautiful Web Interface**: Clean, responsive design with Spotify-inspired styling
-- **Batch Processing**: Efficiently handles playlists of any size
+- **Beautiful Web Interface**: Clean, responsive design with Spotify-inspired dark theme
+- **RESTful API**: Clean separation between frontend and backend
 - **Real-time Feedback**: See sorting progress and results immediately
+- **Batch Processing**: Efficiently handles playlists of any size
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js (version 14 or higher)
+- Node.js (version 16 or higher)
+- npm (comes with Node.js)
 - A Spotify account
 - Spotify Developer App credentials
 
@@ -55,19 +58,49 @@ npm install
    PORT=3000
    ```
 
-### 5. Run the Application
+### 5. Install Dependencies
 
 ```bash
-# Development mode (with auto-restart)
+# Install backend dependencies
+npm install
+
+# Install frontend dependencies (this happens automatically via postinstall)
+# Or manually: npm run frontend:install
+```
+
+### 6. Run the Application
+
+#### Development Mode (Recommended)
+```bash
+# Run both backend and frontend in development mode
+npm run dev:full
+```
+
+This will start:
+- Backend API server on `http://localhost:3000`
+- Frontend development server on `http://localhost:5173`
+
+#### Individual Services
+```bash
+# Backend only
 npm run dev
 
-# Production mode
+# Frontend only
+npm run frontend:dev
+```
+
+#### Production Mode
+```bash
+# Build frontend for production
+npm run build
+
+# Start backend server (serves API only)
 npm start
 ```
 
-### 6. Use the Application
+### 7. Use the Application
 
-1. Open your browser and go to `http://localhost:3000`
+1. Open your browser and go to `http://localhost:5173` (development) 
 2. Click "Connect to Spotify" to authenticate
 3. Select a playlist from your library
 4. Click "Sort by Release Date" and watch the magic happen!
@@ -102,31 +135,69 @@ The application sorts tracks by their album release dates using the following lo
 
 ```
 spotify-playlist-sorter/
-├── src/
-│   ├── index.js                 # Main application server
-│   └── services/
-│       ├── spotifyService.js    # Spotify API integration
-│       └── playlistSorter.js    # Sorting logic
-├── package.json
-├── .env.example
-├── .gitignore
+├── frontend/                    # React frontend (Vite)
+│   ├── src/
+│   │   ├── components/         # React components
+│   │   ├── pages/             # Page components
+│   │   ├── services/          # API client
+│   │   ├── App.jsx           # Main App component
+│   │   └── main.jsx          # Entry point
+│   ├── public/               # Static assets
+│   ├── package.json         # Frontend dependencies
+│   └── vite.config.js       # Vite configuration
+├── src/                     # Backend API (Node.js/Express)
+│   ├── index.js            # Main API server
+│   ├── config/            # Configuration files
+│   ├── services/          # Business logic
+│   │   ├── spotifyService.js  # Spotify API integration
+│   │   └── playlistSorter.js  # Sorting logic
+│   └── utils/             # Utility functions
+├── package.json           # Backend dependencies & scripts
+├── .env.example          # Environment variables template
 └── README.md
 ```
 
 ### Available Scripts
 
-- `npm start` - Run the application in production mode
-- `npm run dev` - Run with nodemon for development
+#### Full-Stack Development
+- `npm run dev:full` - Run both backend and frontend in development mode
+- `npm run build` - Build frontend for production
+
+#### Backend Scripts
+- `npm start` - Run the backend API server in production mode
+- `npm run dev` - Run backend with nodemon for development
 - `npm test` - Run tests (placeholder)
+
+#### Frontend Scripts
+- `npm run frontend:dev` - Run frontend development server
+- `npm run frontend:build` - Build frontend for production
+- `npm run frontend:install` - Install frontend dependencies
 
 ### Adding New Features
 
 The application is designed to be easily extensible:
 
-1. **New Sorting Methods**: Add methods to `PlaylistSorter` class
-2. **Additional API Endpoints**: Extend routes in `index.js`
-3. **Enhanced UI**: Modify the HTML templates or add static files
-4. **Database Integration**: Add persistence for user preferences
+1. **New Sorting Methods**: Add methods to `PlaylistSorter` class in `src/services/playlistSorter.js`
+2. **Additional API Endpoints**: Extend routes in `src/index.js`
+3. **Enhanced UI**: Add new React components in `frontend/src/components/`
+4. **New Pages**: Create new page components in `frontend/src/pages/`
+5. **API Integration**: Extend the API client in `frontend/src/services/apiClient.js`
+6. **Database Integration**: Add persistence for user preferences
+
+### Technology Stack
+
+**Frontend:**
+- React 18 with hooks
+- Vite for build tooling
+- React Router for navigation
+- Axios for API calls
+- Modern CSS with Spotify-inspired design
+
+**Backend:**
+- Node.js with Express
+- Spotify Web API integration
+- CORS enabled for cross-origin requests
+- RESTful API design
 
 ## 🔧 Configuration Options
 
@@ -137,7 +208,14 @@ The application is designed to be easily extensible:
 | `SPOTIFY_CLIENT_ID` | Your Spotify app's Client ID | Required |
 | `SPOTIFY_CLIENT_SECRET` | Your Spotify app's Client Secret | Required |
 | `SPOTIFY_REDIRECT_URI` | OAuth redirect URI | `http://localhost:3000/callback` |
-| `PORT` | Server port | `3000` |
+| `PORT` | Backend server port | `3000` |
+| `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:5173` |
+| `NODE_ENV` | Environment mode | `production` |
+
+**Frontend Environment Variables** (in `frontend/.env`):
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `VITE_API_URL` | Backend API URL | `http://localhost:3000/api` |
 
 ### Spotify API Scopes
 

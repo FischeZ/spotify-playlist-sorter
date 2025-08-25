@@ -1,0 +1,172 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  background-color: #191414;
+  color: #ffffff;
+}
+
+.App {
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.spotify-green {
+  color: #1db954;
+}
+
+.btn {
+  background: #1db954;
+  color: white;
+  padding: 15px 30px;
+  text-decoration: none;
+  border-radius: 25px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+  background: #1ed760;
+}
+
+.btn:disabled {
+  background: #535353;
+  cursor: not-allowed;
+}
+
+.info {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px 0;
+  backdrop-filter: blur(10px);
+}
+
+.form-group {
+  margin: 20px 0;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.form-group select {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #535353;
+  border-radius: 8px;
+  background: #2a2a2a;
+  color: white;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: #1db954;
+}
+
+.result {
+  background: rgba(29, 185, 84, 0.1);
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px 0;
+  text-align: left;
+  border: 1px solid #1db954;
+}
+
+.track-list {
+  max-height: 400px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.track {
+  margin: 10px 0;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.track:last-child {
+  border-bottom: none;
+}
+
+.track-info {
+  flex: 1;
+}
+
+.track-name {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.track-artist {
+  color: #b3b3b3;
+  font-size: 14px;
+}
+
+.track-date {
+  color: #1db954;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid #1db954;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error {
+  background: rgba(255, 0, 0, 0.1);
+  color: #ff6b6b;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px 0;
+  border: 1px solid #ff6b6b;
+}
+
+.success {
+  background: rgba(29, 185, 84, 0.1);
+  color: #1db954;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px 0;
+  border: 1px solid #1db954;
+}
